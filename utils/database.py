@@ -3,7 +3,7 @@ import sqlite3
 from contextlib import contextmanager
 
 DB_DEFAULTS = {
-    'BOT_TOKEN': None,
+    'prefix': '!',
 }
 
 
@@ -39,7 +39,7 @@ class DB:
     def __drop_tables():
         with DB.cursor() as cur:
             cur.execute("DROP TABLE IF EXISTS settings")
-            cur.execute("DROP TABLE IF EXISTS roles")
+            cur.execute("DROP TABLE IF EXISTS faculties")
 
     @staticmethod
     def __create_tables():
@@ -48,16 +48,31 @@ class DB:
                         "key text UNIQUE PRIMARY KEY,"
                         "value text"
                         ")")
-            cur.execute("CREATE TABLE roles ("
-                        "guild_id int,"
-                        "discord_role_id int,"
-                        "permission_level int"
+            cur.execute("CREATE TABLE faculties ("
+                        "role int,"
+                        "title text,"
+                        "icon text"
                         ")")
 
     @staticmethod
     def __seed_tables():
         with DB.cursor() as cur:
-            pass
+            cur.execute("INSERT INTO faculties (role, title, icon) VALUES "
+                        "(898643765198196756, 'None of these', ''), "
+                        "(843164248154701830, 'Datorikas fakultāte', 'DF'), "
+                        "(843178325366145074, 'Biznesa, vadības un ekonomikas fakultāte', 'BVEF'), "
+                        "(843178671086895156, 'Fizikas, matemātikas un optometrijas fakultāte', 'FMOF'), "
+                        "(843178899105906688, 'Ģeogrāfijas un Zemes zinātņu fakultāte', 'GZZF'), "
+                        "(843179411695075349, 'Ķīmijas fakultāte', 'KF'), "
+                        "(843179106786607104, 'Humanitāro zinātņu fakultāte', 'HZF'), "
+                        "(843180448497532938, 'Teoloģijas fakultāte', 'TF'), "
+                        "(843180597623259147, 'Vēstures un filozofijas fakultāte', 'VFF'), "
+                        "(843179777821114395, 'Medicīnas fakultāte', 'MF'), "
+                        "(843179307132125244, 'Juridiskā fakultāte', 'JF'), "
+                        "(843179947626594314, 'Pedagoģijas, psiholoģijas un mākslas fakultāte', 'PPMF'), "
+                        "(843180259565895691, 'Sociālo zinātņu fakultāte', 'SZF'), "
+                        "(843177856652804147, 'Bioloģijas fakultāte', 'BF')"
+                        )
 
     @staticmethod
     def get_setting(key, default=None):
