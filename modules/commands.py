@@ -1,7 +1,7 @@
-from discord import PartialEmoji, TextChannel, Embed
-from discord.ext.commands import Context
+from discord import PartialEmoji, Embed
 from dislash import SelectOption, SelectMenu, MessageInteraction, SlashInteraction
-from utils.bot_helper import prefix, set_prefix, get_faculty_roles
+
+from utils.bot_helper import get_faculty_roles
 from utils.database import DB
 
 
@@ -53,8 +53,10 @@ class Commands:
 
         selected_role = int(selected.value)
         user_roles = [i for i in ctx.author.roles if i.id in faculty_roles and i.id != selected_role]
-
-        await ctx.author.remove_roles(*user_roles, reason="Updated from roles dropdown")
+        try:
+            await ctx.author.remove_roles(*user_roles, reason="Updated from roles dropdown")
+        except Exception as e:
+            print(e)
 
         try:
             selected_role = ctx.guild.get_role(selected_role)
@@ -62,39 +64,33 @@ class Commands:
         except Exception as e:
             print(e)
 
-        await ctx.reply('Your roles were updated', ephemeral=True, hide_user_input=True)
+        await ctx.reply('Your roles were updated', ephemeral=True, delete_after=2)
         await Commands.update_faculty_stats(ctx)
 
     @staticmethod
     async def faculty_stats(ctx: SlashInteraction):
-        roles = get_faculty_roles(ctx)
         embed = Embed(color=0xeaaa00)
         embed.title = 'Current count of faculty members in this server'
-        for title, icon, role in roles:
-            embed.add_field(
-                name=f"{icon if icon else ''} {title}",
-                value=f"{len(role.members)}",
-                inline=True
-            )
         msg = await ctx.channel.send(embed=embed)
 
         with DB.cursor() as cur:
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'facultiesStats'))
 
+        await Commands.update_faculty_stats(ctx)
+
     @staticmethod
     async def update_faculty_stats(ctx):
         roles = get_faculty_roles(ctx)
-
         roles = sorted(roles, key=lambda x: len(x[2].members), reverse=True)
-
         embed = Embed(color=0xeaaa00)
         embed.title = 'Current count of faculty members in this server'
         for title, icon, role in roles:
-            embed.add_field(
-                name=f"{icon if icon else ''} {title}",
-                value=f"{len(role.members)}",
-                inline=True
-            )
+            if 'None' not in title:
+                embed.add_field(
+                    name=f"{icon if icon else ''} {title}",
+                    value=f"{len(role.members)}",
+                    inline=True
+                )
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM messages")
             for row in cur.fetchall():
