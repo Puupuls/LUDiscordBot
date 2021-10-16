@@ -6,7 +6,11 @@ from utils.database import DB
 
 
 def prefix(bot: Bot = None, message: Message = None):
-    p = DB.get_setting(f'PREFIX', '!')
+    try:
+        p = DB.get_setting(f'PREFIX', '!')
+    except:
+        p = '!'
+        DB.clean_db()
     if p is not None:
         if bot:
             return [p, f"<@!{bot.user.id}>"]

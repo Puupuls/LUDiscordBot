@@ -4,6 +4,7 @@ from dislash import SelectOption, SelectMenu, MessageInteraction
 
 from utils.bot_helper import prefix, set_prefix, get_faculty_roles
 from utils.database import DB
+from utils.logging_utils import LoggingUtils
 
 
 class Commands:
@@ -61,7 +62,7 @@ class Commands:
             components=[options]
         )
         with DB.cursor() as cur:
-            cur.execute("INSERT INTO messages (message, type) VALUES (?, ?)", (msg.id, 'facultiesSelect'))
+            cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'facultiesSelect'))
         await ctx.message.delete()
 
     @staticmethod
@@ -100,21 +101,31 @@ class Commands:
         msg = await ctx.send(embed=embed)
 
         with DB.cursor() as cur:
-            cur.execute("INSERT INTO messages (message, type) VALUES (?, ?)", (msg.id, 'facultiesStats'))
+            cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'facultiesStats'))
         await ctx.message.delete()
 
     @staticmethod
     async def update_faculty_stats(ctx):
         roles = get_faculty_roles(ctx)
+
+        roles = sorted(roles, key=lambda x: len(x[2].members), reverse=True)
+
+        embed = Embed(color=0xeaaa00)
+        embed.title = 'Current count of faculty members in this server'
+        for title, icon, role in roles:
+            embed.add_field(
+                name=f"{icon if icon else ''} {title}",
+                value=f"{len(role.members)}",
+                inline=True
+            )
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM messages")
             for row in cur.fetchall():
-                if row['facultiesStats']:
+                if row['type'] == 'facultiesStats':
                     try:
-                        for chat in ctx.guild.channels:
-                            if isinstance(chat, TextChannel):
-                                msg = chat.get_partial_message(row['message'])
-                                if msg:
-                                    msg.edit(content='')
-                    except:
+                        chat = ctx.guild.get_channel(row['channel'])
+                        msg = chat.get_partial_message(row['message'])
+                        if msg:
+                            await msg.edit(embed=embed)
+                    except Exception as e:
                         pass

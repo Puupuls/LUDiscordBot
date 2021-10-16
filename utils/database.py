@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 DB_DEFAULTS = {
     'prefix': '!',
+    'cur_migration': '0'
 }
 
 
@@ -56,6 +57,7 @@ class DB:
                         "icon text"
                         ")")
             cur.execute("CREATE TABLE messages ("
+                        "channel int,"
                         "message int,"
                         "type text"
                         ")")
@@ -80,6 +82,8 @@ class DB:
                         "(843177856652804147, 'Bioloģijas fakultāte', 'BF')"
                         )
 
+            cur.execute("INSERT INTO settings VALUES ('cur_migration', 1)")  # TODO Update if making edits
+
     @staticmethod
     def get_setting(key, default=None):
         with DB.cursor() as cur:
@@ -99,6 +103,15 @@ class DB:
                         "(:key, :value) "
                         "ON CONFLICT(key) DO UPDATE SET value=:value;", {'key': key, 'value': value})
 
+    @staticmethod
+    def migrate_db():
+        try:
+            cur_migration = int(DB.get_setting('cur_migration'))
+        except:  # DB has not been initialised yet
+            DB.clean_db()
+            cur_migration = int(DB.get_setting('cur_migration'))
 
-if not os.path.exists('database.db'):
-    DB.clean_db()
+        if cur_migration < 1:
+            DB.set_setting('cur_migration', 1)
+            with DB.cursor() as cur:
+                cur.execute("INSERT INTO settings VALUES ('cur_migration', 1)")

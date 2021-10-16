@@ -29,6 +29,7 @@ client = commands.Bot(
     owner_id=240041172125483010,
     intents=intents,
     help_command=None,
+    case_insensitive=True,
     strip_after_prefix=True
 )
 slash = InteractionClient(client)
@@ -57,7 +58,7 @@ async def prefix(ctx, new_prefix: str = ''):
 
 
 @client.command(
-    name='facultyRoles',
+    name='facultySelect',
     description='Create faculty role selection message',
     usage='',
 )
@@ -105,8 +106,12 @@ async def help(context: Context):
     hidden=True
 )
 @has_permissions(administrator=True)
-async def help(context: Context):
+async def clean_db(ctx: Context):
     DB.clean_db()
+    await ctx.message.delete()
+
+
+DB.migrate_db()  # Auto update DB to newest level
 
 client.run('')
 
