@@ -3,7 +3,6 @@ import sqlite3
 from contextlib import contextmanager
 
 DB_DEFAULTS = {
-    'prefix': '!',
     'cur_migration': '0'
 }
 

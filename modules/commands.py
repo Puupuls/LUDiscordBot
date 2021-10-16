@@ -1,34 +1,13 @@
 from discord import PartialEmoji, TextChannel, Embed
 from discord.ext.commands import Context
-from dislash import SelectOption, SelectMenu, MessageInteraction
-
+from dislash import SelectOption, SelectMenu, MessageInteraction, SlashInteraction
 from utils.bot_helper import prefix, set_prefix, get_faculty_roles
 from utils.database import DB
-from utils.logging_utils import LoggingUtils
 
 
 class Commands:
     @staticmethod
-    async def help(ctx: Context):
-        response = 'LU Bot, developed by @Puupuls\n'
-        response += 'Available commands:\n'
-        for c in sorted(ctx.bot.commands, key=lambda x: x.name):
-            if not c.hidden:
-                response += f"• {ctx.prefix}{c.name}{' ' + c.usage if c.usage else ''}\n"
-                response += f"   {c.description}\n"
-        await ctx.send(response)
-
-    @staticmethod
-    async def prefix(ctx: Context, new_prefix: str):
-        if new_prefix:
-            set_prefix(new_prefix)
-            response = f'Prefix changed to "{new_prefix}"'
-        else:
-            response = f"Current prefix is \"{prefix()}\""
-        await ctx.send(response)
-
-    @staticmethod
-    async def faculty_roles(ctx: Context):
+    async def faculty_roles(ctx: SlashInteraction):
         options = []
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM faculties order by title")
@@ -57,13 +36,12 @@ class Commands:
             max_values=1,
             placeholder='Please select your faculty'
         )
-        msg = await ctx.send(
+        msg = await ctx.channel.send(
             content="Please select your LU faculty (Choose your current/latest one)",
             components=[options]
         )
         with DB.cursor() as cur:
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'facultiesSelect'))
-        await ctx.message.delete()
 
     @staticmethod
     async def on_faculty_role(ctx: MessageInteraction, selected: SelectOption):
@@ -84,11 +62,11 @@ class Commands:
         except Exception as e:
             print(e)
 
-        await ctx.reply('Your roles were updated', ephemeral=True)
+        await ctx.reply('Your roles were updated', ephemeral=True, hide_user_input=True)
         await Commands.update_faculty_stats(ctx)
 
     @staticmethod
-    async def faculty_stats(ctx: Context):
+    async def faculty_stats(ctx: SlashInteraction):
         roles = get_faculty_roles(ctx)
         embed = Embed(color=0xeaaa00)
         embed.title = 'Current count of faculty members in this server'
@@ -98,11 +76,10 @@ class Commands:
                 value=f"{len(role.members)}",
                 inline=True
             )
-        msg = await ctx.send(embed=embed)
+        msg = await ctx.channel.send(embed=embed)
 
         with DB.cursor() as cur:
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'facultiesStats'))
-        await ctx.message.delete()
 
     @staticmethod
     async def update_faculty_stats(ctx):

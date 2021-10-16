@@ -3,8 +3,7 @@ import discord
 from discord import Message
 from discord.ext import commands
 from discord.ext.commands import Context, has_permissions
-from dislash import InteractionClient, MessageInteraction
-
+from dislash import InteractionClient, MessageInteraction, SlashInteraction
 from modules.commands import Commands
 from utils.bot_helper import prefix, set_prefix
 from utils.database import DB
@@ -32,8 +31,8 @@ client = commands.Bot(
     case_insensitive=True,
     strip_after_prefix=True
 )
-slash = InteractionClient(client)
 guilds = [824209921444544533, 755035407380643971]
+slash = InteractionClient(client, test_guilds=guilds)
 
 
 @client.event
@@ -43,8 +42,7 @@ async def on_ready():
 
 @client.event
 async def on_command_error(ctx, error):
-    logger.error(error)
-    await ctx.channel.send(f'{error}\nSee `{ctx.prefix}help` for more info')
+    await ctx.channel.send(f'See available slash commands, my commands are prefixed with "lu_"')
 
 
 @client.command(
@@ -57,23 +55,23 @@ async def prefix(ctx, new_prefix: str = ''):
     await Commands.prefix(ctx, new_prefix)
 
 
-@client.command(
-    name='facultySelect',
+@slash.command(
+    name='lu_faculty_select',
     description='Create faculty role selection message',
-    usage='',
 )
 @has_permissions(administrator=True)
-async def faculty_roles(ctx):
+async def faculty_roles(ctx: SlashInteraction):
+    await ctx.reply(content='Creating selector', ephemeral=True, delete_after=1)
     await Commands.faculty_roles(ctx)
 
 
-@client.command(
-    name='facultyStats',
+@slash.command(
+    name='lu_faculty_stats',
     description='Create faculty role statistics message',
-    usage='',
 )
 @has_permissions(administrator=True)
-async def faculty_stats(ctx):
+async def faculty_stats(ctx: SlashInteraction):
+    await ctx.reply(content='Creating stats display', ephemeral=True, delete_after=1)
     await Commands.faculty_stats(ctx)
 
 
@@ -89,26 +87,16 @@ async def on_message_delete(message: Message):
         cur.execute("DELETE FROM messages WHERE message=?", (message.id,))
 
 
-@client.command(
-    name='help',
-    description='Show commands and usages',
-    usage='',
-    hidden=True
+@slash.command(
+    name='lu_help',
+    description='Show info',
 )
-async def help(context: Context):
-    await Commands.help(context)
-
-
-@client.command(
-    name='cleanDB',
-    description='',
-    usage='',
-    hidden=True
-)
-@has_permissions(administrator=True)
-async def clean_db(ctx: Context):
-    DB.clean_db()
-    await ctx.message.delete()
+async def help(context: SlashInteraction):
+    await context.send(
+        content="This plugin uses slash commands prefixed with \"lu_\"\nDeveloped by @Puupuls",
+        delete_after=5,
+        ephemeral=True
+    )
 
 
 DB.migrate_db()  # Auto update DB to newest level

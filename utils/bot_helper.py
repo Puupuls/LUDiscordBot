@@ -9,7 +9,7 @@ def prefix(bot: Bot = None, message: Message = None):
     try:
         p = DB.get_setting(f'PREFIX', '!')
     except:
-        p = '!'
+        p = 'lu!'
         DB.clean_db()
     if p is not None:
         if bot:
