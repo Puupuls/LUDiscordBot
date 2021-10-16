@@ -10,5 +10,5 @@ Based on discord.py package
 
 Packages:
 ``` 
-pip install discord.py dislash.py
+pip install discord.py dislash.py asyncio
 ```

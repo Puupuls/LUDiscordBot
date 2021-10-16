@@ -11,7 +11,8 @@ class DB:
     @staticmethod
     @contextmanager
     def cursor():
-        conn = sqlite3.connect('database.db')
+        path = '/'.join(__file__.split('/')[:-2])
+        conn = sqlite3.connect(path + '/database.db')
         conn.row_factory = DB.dict_factory
         try:
             yield conn.cursor()
@@ -40,6 +41,7 @@ class DB:
         with DB.cursor() as cur:
             cur.execute("DROP TABLE IF EXISTS settings")
             cur.execute("DROP TABLE IF EXISTS faculties")
+            cur.execute("DROP TABLE IF EXISTS messages")
 
     @staticmethod
     def __create_tables():
@@ -53,12 +55,16 @@ class DB:
                         "title text,"
                         "icon text"
                         ")")
+            cur.execute("CREATE TABLE messages ("
+                        "message int,"
+                        "type text"
+                        ")")
 
     @staticmethod
     def __seed_tables():
         with DB.cursor() as cur:
             cur.execute("INSERT INTO faculties (role, title, icon) VALUES "
-                        "(898643765198196756, 'None of these', ''), "
+                        "(898643765198196756, ' None of these', ''), "
                         "(843164248154701830, 'Datorikas fakultāte', 'DF'), "
                         "(843178325366145074, 'Biznesa, vadības un ekonomikas fakultāte', 'BVEF'), "
                         "(843178671086895156, 'Fizikas, matemātikas un optometrijas fakultāte', 'FMOF'), "

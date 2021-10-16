@@ -1,11 +1,13 @@
 import logging
 import discord
+from discord import Message
 from discord.ext import commands
 from discord.ext.commands import Context, has_permissions
 from dislash import InteractionClient, MessageInteraction
 
 from modules.commands import Commands
 from utils.bot_helper import prefix, set_prefix
+from utils.database import DB
 from utils.logging_utils import LoggingUtils
 
 logger = logging.getLogger('discord')
@@ -56,7 +58,7 @@ async def prefix(ctx, new_prefix: str = ''):
 
 @client.command(
     name='facultyRoles',
-    description='Create or recreate faculty role selection message',
+    description='Create faculty role selection message',
     usage='',
 )
 @has_permissions(administrator=True)
@@ -64,10 +66,26 @@ async def faculty_roles(ctx):
     await Commands.faculty_roles(ctx)
 
 
+@client.command(
+    name='facultyStats',
+    description='Create faculty role statistics message',
+    usage='',
+)
+@has_permissions(administrator=True)
+async def faculty_stats(ctx):
+    await Commands.faculty_stats(ctx)
+
+
 @client.event
 async def on_dropdown(inter: MessageInteraction):
     if inter.component.custom_id == 'facultiesSelect':
         await Commands.on_faculty_role(inter, inter.component.selected_options[0])
+
+
+@client.event
+async def on_message_delete(message: Message):
+    with DB.cursor() as cur:
+        cur.execute("DELETE FROM messages WHERE message=?", (message.id,))
 
 
 @client.command(
@@ -79,6 +97,16 @@ async def on_dropdown(inter: MessageInteraction):
 async def help(context: Context):
     await Commands.help(context)
 
+
+@client.command(
+    name='cleanDB',
+    description='',
+    usage='',
+    hidden=True
+)
+@has_permissions(administrator=True)
+async def help(context: Context):
+    DB.clean_db()
 
 client.run('')
 
