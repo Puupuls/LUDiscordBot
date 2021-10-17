@@ -1,3 +1,4 @@
+import discord
 from discord import PartialEmoji, Embed
 from dislash import SelectOption, SelectMenu, MessageInteraction, SlashInteraction
 
@@ -102,3 +103,92 @@ class Commands:
                             await msg.edit(embed=embed)
                     except Exception as e:
                         pass
+
+    @staticmethod
+    async def send_post(ctx: SlashInteraction, channel: discord.TextChannel, message: str):
+        if isinstance(channel, discord.TextChannel):
+            await channel.send(message.encode("utf-8").decode("unicode_escape"))
+            await ctx.send(':thumbsup:', ephemeral=True, delete_after=1)
+        else:
+            await ctx.reply('You must provide text channel', ephemeral=True, delete_after=2)
+
+    @staticmethod
+    async def edit_post(ctx: SlashInteraction, channel: discord.TextChannel, message_id: int, message: str):
+        if isinstance(channel, discord.TextChannel):
+            try:
+                msg = channel.get_partial_message(message_id)
+                if msg:
+                    try:
+                        await msg.edit(content=message.encode("utf-8").decode("unicode_escape"))
+                        await ctx.reply(':thumbsup:', ephemeral=True, delete_after=1)
+                    except Exception as e:
+                        print(e)
+                        await ctx.reply('Could not edit message with provided id', ephemeral=True, delete_after=2)
+                else:
+                    await ctx.reply('Could not find message with provided id', ephemeral=True, delete_after=2)
+            except Exception as e:
+                print(e)
+                await ctx.reply('Could not find message with provided id', ephemeral=True, delete_after=2)
+        else:
+            await ctx.reply('You must provide text channel', ephemeral=True, delete_after=2)
+
+    @staticmethod
+    async def rules_message(ctx: SlashInteraction):
+        await ctx.reply('Creating rules message:', ephemeral=True, delete_after=2)
+        msg = await ctx.channel.send('**=== RULES ===**')
+        with DB.cursor() as cur:
+            cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'rules'))
+
+        await Commands.update_rules_message(ctx)
+
+    @staticmethod
+    async def update_rules_message(ctx: SlashInteraction):
+        message = "**=== RULES ===**\n"
+        with DB.cursor() as cur:
+            cur.execute("SELECT * FROM rules ORDER BY id")
+
+            for row in cur.fetchall():
+                message += f"**{row['id']}**: {row['rule']}\n"
+
+            cur.execute("SELECT * FROM messages")
+            for row in cur.fetchall():
+                if row['type'] == 'rules':
+                    try:
+                        chat = ctx.guild.get_channel(row['channel'])
+                        msg = chat.get_partial_message(row['message'])
+                        if msg:
+                            await msg.edit(content=message)
+                    except Exception as e:
+                        pass
+
+    @staticmethod
+    async def rules_add(ctx: SlashInteraction, msg: str):
+        await ctx.reply('Updating rules:', ephemeral=True, delete_after=2)
+        with DB.cursor() as cur:
+            cur.execute("SELECT max(id) as mid FROM rules")
+            mid = cur.fetchone()['mid']
+            if not mid:
+                mid = 0
+            cur.execute("INSERT INTO rules VALUES "
+                        "(?, ?)", (mid+1, msg,))
+
+        await Commands.update_rules_message(ctx)
+
+    @staticmethod
+    async def rules_remove(ctx: SlashInteraction, rid: int):
+        await ctx.reply('Updating rules:', ephemeral=True, delete_after=2)
+        with DB.cursor() as cur:
+            cur.execute('DELETE FROM rules WHERE id=?', (rid,))
+            cur.execute('UPDATE rules SET id = id-1 WHERE id > ?', (rid,))
+
+        await Commands.update_rules_message(ctx)
+
+    @staticmethod
+    async def rules_reorder(ctx: SlashInteraction, rid: int, new_id: int):
+        await ctx.reply('Updating rules:', ephemeral=True, delete_after=2)
+        with DB.cursor() as cur:
+
+            cur.execute('UPDATE rules SET id = id+1 WHERE id >= ?', (new_id,))
+            cur.execute('UPDATE rules SET id = ? WHERE id = ?', (new_id, rid + 1))
+
+        await Commands.update_rules_message(ctx)

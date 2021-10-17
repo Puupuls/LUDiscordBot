@@ -42,6 +42,7 @@ class DB:
             cur.execute("DROP TABLE IF EXISTS settings")
             cur.execute("DROP TABLE IF EXISTS faculties")
             cur.execute("DROP TABLE IF EXISTS messages")
+            cur.execute("DROP TABLE IF EXISTS rules")
 
     @staticmethod
     def __create_tables():
@@ -81,8 +82,6 @@ class DB:
                         "(843177856652804147, 'Bioloģijas fakultāte', 'BF')"
                         )
 
-            cur.execute("INSERT INTO settings VALUES ('cur_migration', 1)")  # TODO Update if making edits
-
     @staticmethod
     def get_setting(key, default=None):
         with DB.cursor() as cur:
@@ -114,3 +113,11 @@ class DB:
             DB.set_setting('cur_migration', 1)
             with DB.cursor() as cur:
                 cur.execute("INSERT INTO settings VALUES ('cur_migration', 1)")
+
+        if cur_migration < 2:
+            DB.set_setting('cur_migration', 2)
+            with DB.cursor() as cur:
+                cur.execute("CREATE TABLE rules ( "
+                            "id int, "
+                            "rule text "
+                            ")")
