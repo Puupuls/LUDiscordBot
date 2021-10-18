@@ -35,6 +35,7 @@ client = commands.Bot(
 guilds = [824209921444544533, 755035407380643971]
 slash = InteractionClient(client, test_guilds=guilds)
 
+
 @client.event
 async def on_ready():
     pass
@@ -51,6 +52,7 @@ async def on_slash_command_error(ctx: SlashInteraction, error):
     logger.error(error)
     print(error)
     await ctx.reply(f'See available slash commands by typing forward-slash and browsing your options', ephemeral=True, delete_after=2)
+
 
 @client.event
 async def on_dropdown(inter: MessageInteraction):
@@ -91,29 +93,37 @@ async def about(ctx: SlashInteraction):
     description="Parent command for faculty actions",
     options=[
         Option(
-            name='action',
-            description='What action to execute',
-            choices=[
-                OptionChoice('Generate dropdown selector', 'selector'),
-                OptionChoice('Generate stats display', 'stats'),
-            ],
-            required=True,
-            type=OptionType.STRING
-        )
+            description='Generate dropdown selector',
+            name='selector',
+            type=OptionType.SUB_COMMAND,
+            options=[
+                Option(
+                    name='test',
+                    description='testD',
+                    type=OptionType.STRING
+                )
+            ]
+        ),
+        Option(
+            description='Generate stats display',
+            name='stats',
+            type=OptionType.SUB_COMMAND
+        ),
     ]
 )
-@has_permissions(administrator=True)
-async def faculties(ctx: SlashInteraction, action: str):
-    if action == 'selector':
-        await ctx.reply(content='Creating selector', ephemeral=True, delete_after=1)
+async def faculties(ctx: SlashInteraction):
+    options = ctx.data.options
+    if 'selector' in options:
+        options = options['selector'].options
         await Commands.faculty_roles(ctx)
-    elif action == 'stats':
-        await ctx.reply(content='Creating stats display', ephemeral=True, delete_after=1)
+    elif 'stats' in options:
+        options = options['stats'].options
         await Commands.faculty_stats(ctx)
 
 
 @slash.command(
     name=f'message',
+    description="Send or edit message in the name of bot",
 )
 async def post(ctx: SlashInteraction, **kwargs):
     pass
@@ -137,7 +147,6 @@ async def post(ctx: SlashInteraction, **kwargs):
         ),
     ]
 )
-@has_permissions(administrator=True)
 async def send_post(ctx: SlashInteraction, channel: discord.TextChannel, message: str):
     await Commands.send_post(ctx, channel, message)
 
@@ -147,15 +156,9 @@ async def send_post(ctx: SlashInteraction, channel: discord.TextChannel, message
     description='Edit bot message',
     options=[
         Option(
-            name='channel',
-            description='Text channel to send message in',
-            type=OptionType.CHANNEL,
-            required=True
-        ),
-        Option(
-            name='message_id',
-            description='Message to edit',
-                type=OptionType.STRING,
+            name='message_link',
+            description='Link to message that you want to edit (Get by R-click on message and "Copy link")',
+            type=OptionType.STRING,
             required=True
         ),
         Option(
@@ -166,9 +169,13 @@ async def send_post(ctx: SlashInteraction, channel: discord.TextChannel, message
         ),
     ]
 )
-@has_permissions(administrator=True)
-async def edit_post(ctx: SlashInteraction, channel: discord.TextChannel, message_id: str, message: str):
-    await Commands.edit_post(ctx, channel, int(message_id), message)
+async def edit_post(ctx: SlashInteraction, message_link: str, message: str):
+    try:
+        channel_id, message_id = message_link.split('/')[-2:]
+        await Commands.edit_post(ctx, int(channel_id), int(message_id), message)
+    except Exception as e:
+        logging.error(e)
+        await ctx.reply(f"Invalid link provided or something went wrong\n your message was ```{message}```", ephemeral=True)
 
 
 @slash.command(
