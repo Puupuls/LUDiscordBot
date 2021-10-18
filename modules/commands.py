@@ -1,9 +1,12 @@
+from datetime import datetime, timedelta
+
 import discord
-from discord import PartialEmoji, Embed
+from discord import PartialEmoji, Embed, Permissions
 from dislash import SelectOption, SelectMenu, MessageInteraction, SlashInteraction
 
 from utils.bot_helper import get_faculty_roles
 from utils.database import DB
+from utils.logging_utils import LoggingUtils
 
 
 class Commands:
@@ -35,10 +38,10 @@ class Commands:
             options=options,
             custom_id='facultiesSelect',
             max_values=1,
-            placeholder='Please select your faculty'
+            placeholder='Lūdzu izvēlies savu fakultāti'
         )
         msg = await ctx.channel.send(
-            content="Please select your LU faculty (Choose your current/latest one)",
+            content="Izvēlies savu fakultāti (ja esi pārstāvējis vairākas, izvēlies pēdējo vai arī kurai jūties vairāk piederīgs)",
             components=[options]
         )
         with DB.cursor() as cur:
@@ -47,31 +50,57 @@ class Commands:
     @staticmethod
     async def on_faculty_role(ctx: MessageInteraction, selected: SelectOption):
         faculty_roles = []
+        user = DB.get_user(ctx.author)
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM faculties order by title")
             for row in cur.fetchall():
                 faculty_roles.append(row['role'])
 
         selected_role = int(selected.value)
-        user_roles = [i for i in ctx.author.roles if i.id in faculty_roles and i.id != selected_role]
-        try:
-            await ctx.author.remove_roles(*user_roles, reason="Updated from roles dropdown")
-        except Exception as e:
-            print(e)
+        user_roles = [i for i in ctx.author.roles if i.id in faculty_roles]
+        if len(user_roles) == 1:
+            user['faculty_id'] = user_roles[0].id
+            user['last_faculty_change'] = datetime.now()-timedelta(20)
+        author_permission: Permissions = ctx.author.permissions_in(ctx.channel)
+        if user['faculty_id'] not in [i.id for i in user_roles]:
+            if not user['is_faculty_locked']:
+                change_interval = timedelta(days=DB.get_setting('faculty_change_interval_days', 30))
+                if user['last_faculty_change'] < datetime.now() - change_interval or author_permission.manage_roles:
+                    try:
+                        await ctx.author.remove_roles(*user_roles, reason="Updated from roles dropdown")
+                    except Exception as e:
+                        print(e)
 
-        try:
-            selected_role = ctx.guild.get_role(selected_role)
-            await ctx.author.add_roles(selected_role, reason="Updated from roles dropdown")
-        except Exception as e:
-            print(e)
-
-        await ctx.reply('Your roles were updated', ephemeral=True, delete_after=2)
+                    try:
+                        selected_role = ctx.guild.get_role(selected_role)
+                        await ctx.author.add_roles(selected_role, reason="Updated from roles dropdown")
+                        if user['faculty_id'] and user['faculty_id'] != selected_role.id:
+                            await LoggingUtils.log_to_discord(
+                                ctx,
+                                'User changed their faculty',
+                                LoggingUtils.LogLevels.WARN,
+                                user=ctx.author.mention,
+                                initial_faculty=ctx.guild.get_role(user['faculty_id']).mention,
+                                new_faculty=selected_role.mention
+                            )
+                        user['faculty_id'] = selected_role.id
+                        user['last_faculty_change'] = datetime.now()
+                    except Exception as e:
+                        print(e)
+                    await ctx.reply('Tava fakultāte tika atjaunota', ephemeral=True, delete_after=2)
+                else:
+                    await ctx.reply(f'Tu atkārtoti varēsi izvēlēties savu fakultāti {(datetime.now() + (change_interval-(datetime.now()-user["last_faculty_change"]))).strftime("%Y.%m.%d")}', ephemeral=True, delete_after=2)
+            else:
+                await ctx.reply('Tu nedrīksti mainīt savu fakultāti, ja tas tiešām ir nepieciešams, sazinies ar administratoriem', ephemeral=True, delete_after=2)
+        else:
+            await ctx.reply('Tu jau esi reģistrēts šajā fakultātē', ephemeral=True, delete_after=2)
+        DB.set_user(user)
         await Commands.update_faculty_stats(ctx)
 
     @staticmethod
     async def faculty_stats(ctx: SlashInteraction):
         embed = Embed(color=0xeaaa00)
-        embed.title = 'Current count of faculty members in this server'
+        embed.title = 'Šobrīdējais fakultāšu pārstāvju skaits serverī'
         msg = await ctx.channel.send(embed=embed)
 
         with DB.cursor() as cur:
@@ -84,7 +113,7 @@ class Commands:
         roles = get_faculty_roles(ctx)
         roles = sorted(roles, key=lambda x: len(x[2].members), reverse=True)
         embed = Embed(color=0xeaaa00)
-        embed.title = 'Current count of faculty members in this server'
+        embed.title = 'Šobrīdējais fakultāšu pārstāvju skaits serverī'
         for title, icon, role in roles:
             if 'None' not in title:
                 embed.add_field(
@@ -107,7 +136,7 @@ class Commands:
     @staticmethod
     async def send_post(ctx: SlashInteraction, channel: discord.TextChannel, message: str):
         if isinstance(channel, discord.TextChannel):
-            await channel.send(message.encode("utf-8").decode("unicode_escape"))
+            await channel.send(message.replace('\\n', '\n'))
             await ctx.send(':thumbsup:', ephemeral=True, delete_after=1)
         else:
             await ctx.reply('You must provide text channel', ephemeral=True, delete_after=2)
@@ -119,7 +148,7 @@ class Commands:
                 msg = channel.get_partial_message(message_id)
                 if msg:
                     try:
-                        await msg.edit(content=message.encode("utf-8").decode("unicode_escape"))
+                        await msg.edit(content=message.replace('\\n', '\n'))
                         await ctx.reply(':thumbsup:', ephemeral=True, delete_after=1)
                     except Exception as e:
                         print(e)
@@ -135,7 +164,7 @@ class Commands:
     @staticmethod
     async def rules_message(ctx: SlashInteraction):
         await ctx.reply('Creating rules message:', ephemeral=True, delete_after=2)
-        msg = await ctx.channel.send('**=== RULES ===**')
+        msg = await ctx.channel.send('**=== NOTEIKUMI ===**')
         with DB.cursor() as cur:
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'rules'))
 
@@ -143,7 +172,7 @@ class Commands:
 
     @staticmethod
     async def update_rules_message(ctx: SlashInteraction):
-        message = "**=== RULES ===**\n"
+        message = "**=== NOTEIKUMI ===**\n"
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM rules ORDER BY id")
 

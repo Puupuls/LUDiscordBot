@@ -77,6 +77,16 @@ async def about(context: SlashInteraction):
 
 
 @slash.command(
+    name=f'set_log_channel',
+    description='Set curren channel as bots log channel, server can have only one log channel',
+)
+async def about(ctx: SlashInteraction):
+    DB.set_setting('log_channel', ctx.channel.id)
+    await LoggingUtils.log_to_discord(ctx, 'Set this channel as logging channel')
+    await ctx.reply(':thumbsup:', ephemeral=True)
+
+
+@slash.command(
     name=f"faculties",
     description="Parent command for faculty actions",
     options=[

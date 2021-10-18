@@ -1,6 +1,9 @@
 import os
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
+from utils.logging_utils import LoggingUtils
+from discord import User
 
 DB_DEFAULTS = {
     'cur_migration': '0'
@@ -43,6 +46,7 @@ class DB:
             cur.execute("DROP TABLE IF EXISTS faculties")
             cur.execute("DROP TABLE IF EXISTS messages")
             cur.execute("DROP TABLE IF EXISTS rules")
+            cur.execute("DROP TABLE IF EXISTS role_switch_log")
 
     @staticmethod
     def __create_tables():
@@ -102,6 +106,38 @@ class DB:
                         "ON CONFLICT(key) DO UPDATE SET value=:value;", {'key': key, 'value': value})
 
     @staticmethod
+    def get_user(user: User):
+        with DB.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE user_id = ?", (user.id,))
+            if cur.rowcount > 0:
+                return cur.fetchone()
+            else:
+                return {
+                    'user_id': user.id,
+                    'faculty_id': None,
+                    'last_faculty_change': datetime.fromtimestamp(0),
+                    'is_faculty_locked': False,
+                }
+
+    @staticmethod
+    def set_user(user: dict):
+        try:
+            with DB.cursor() as cur:
+                cur.execute("SELECT * FROM users WHERE user_id = ?", (user['user_id'],))
+                if cur.rowcount > 0:
+                    cur.execute("UPDATE users SET "
+                                "(faculty_id, last_faculty_change, is_faculty_locked) = "
+                                "(:faculty_id, :last_faculty_change, :is_faculty_locked)"
+                                "WHERE user_id = :user_id", user)
+                else:
+                    cur.execute("UPDATE users SET "
+                                "(faculty_id, last_faculty_change, is_faculty_locked) = "
+                                "(:faculty_id, :last_faculty_change, :is_faculty_locked)", user)
+        except Exception as e:
+            LoggingUtils.logger.error(e)
+            LoggingUtils.logger.debug(user)
+
+    @staticmethod
     def migrate_db():
         try:
             cur_migration = int(DB.get_setting('cur_migration'))
@@ -120,4 +156,14 @@ class DB:
                 cur.execute("CREATE TABLE rules ( "
                             "id int, "
                             "rule text "
+                            ")")
+
+        if cur_migration < 3:
+            DB.set_setting('cur_migration', 3)
+            with DB.cursor() as cur:
+                cur.execute("CREATE TABLE users ( "
+                            "user_id int, "
+                            "faculty_id int, "
+                            "last_faculty_change datetime, "
+                            "is_faculty_locked bool default FALSE "
                             ")")
