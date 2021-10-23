@@ -1,4 +1,5 @@
 import enum
+import json
 import logging
 import os
 import re
@@ -32,6 +33,30 @@ class LoggingUtils:
                 await channel.send(embed=embed)
             except Exception as e:
                 LoggingUtils.logger.error(e)
+
+    @staticmethod
+    async def log_to_db(
+            event_name: str,
+            user_id: int,
+            message_id: int = None,
+            channel_id: int = None,
+            target_user: int = None,
+            other_data: dict = None
+    ):
+        from utils.database import DB
+        with DB.cursor() as cur:
+            cur.execute("INSERT INTO log "
+                        "(event_name, timestamp, user_id, message_id, channel_id, target_user, other_data) VALUES "
+                        "(?,          ?,         ?,       ?,          ?,          ?,           ?)",
+                        (
+                            event_name,
+                            datetime.now(),
+                            user_id,
+                            message_id,
+                            channel_id,
+                            target_user,
+                            json.dumps(other_data)
+                        ))
 
     @staticmethod
     def init(name):

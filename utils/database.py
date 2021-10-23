@@ -130,8 +130,8 @@ class DB:
                                 "(:faculty_id, :last_faculty_change, :is_faculty_locked)"
                                 "WHERE user_id = :user_id", user)
                 else:
-                    cur.execute("UPDATE users SET "
-                                "(faculty_id, last_faculty_change, is_faculty_locked) = "
+                    cur.execute("INSERT INTO users "
+                                "(faculty_id, last_faculty_change, is_faculty_locked) values "
                                 "(:faculty_id, :last_faculty_change, :is_faculty_locked)", user)
         except Exception as e:
             LoggingUtils.logger.error(e)
@@ -166,4 +166,17 @@ class DB:
                             "faculty_id int, "
                             "last_faculty_change datetime, "
                             "is_faculty_locked bool default FALSE "
+                            ")")
+
+        if cur_migration < 4:
+            DB.set_setting('cur_migration', 4)
+            with DB.cursor() as cur:
+                cur.execute("CREATE TABLE log ("
+                            "event_name text, "
+                            "timestamp DATETIME, "
+                            "user_id int, "
+                            "message_id int, "
+                            "channel_id int, "
+                            "target_user int, "
+                            "other_data text"
                             ")")
