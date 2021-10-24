@@ -35,7 +35,7 @@ class LoggingUtils:
                 LoggingUtils.logger.error(e)
 
     @staticmethod
-    async def log_to_db(
+    def log_to_db(
             event_name: str,
             user_id: int,
             message_id: int = None,

@@ -1,6 +1,6 @@
 import re
 
-from discord import User, Message, PartialEmoji
+from discord import User, Message, PartialEmoji, Guild
 from discord.ext.commands import Bot
 
 from utils.database import DB
@@ -22,9 +22,6 @@ class BotHelper:
 
     def set_prefix(new_prefix: str):
         DB.set_setting(f'PREFIX', new_prefix)
-
-    def has_permissions(user: User):
-        return True
 
     def get_faculty_roles(ctx):
         with DB.cursor() as cur:

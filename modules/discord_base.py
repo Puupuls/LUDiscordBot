@@ -2,12 +2,9 @@ import logging
 import discord
 from discord.ext import commands
 from dislash import InteractionClient
+from ENV import GUILDS, OWNER
 from utils.bot_helper import BotHelper
 from utils.logging_utils import LoggingUtils
-
-GUILDS = [0]
-OWNER = 0
-BOT_TOKEN = ''
 
 
 def init_discord():

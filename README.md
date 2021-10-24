@@ -15,5 +15,6 @@ pip install discord.py dislash.py asyncio
 
 ------------------
 
-When updating database, it is recommended to make updates both in DB.migrate_db() and 
-all of DB.__drop_tables(), DB.__create_tables() and DB.__seed_tables()
+
+If you wish to collaborate and add features/bugfixes, please open Pull request, if you do not want/feel confident to make fixes yourself
+open issue in Issues tab

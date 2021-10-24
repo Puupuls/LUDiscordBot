@@ -109,30 +109,31 @@ class DB:
     def get_user(user: User):
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE user_id = ?", (user.id,))
-            if cur.rowcount > 0:
-                return cur.fetchone()
-            else:
-                return {
+            user = cur.fetchone()
+            if not user:
+                user = {
                     'user_id': user.id,
                     'faculty_id': None,
                     'last_faculty_change': datetime.fromtimestamp(0),
                     'is_faculty_locked': False,
                 }
+            return user
 
     @staticmethod
     def set_user(user: dict):
         try:
             with DB.cursor() as cur:
                 cur.execute("SELECT * FROM users WHERE user_id = ?", (user['user_id'],))
-                if cur.rowcount > 0:
+                u = cur.fetchone()
+                if u:
                     cur.execute("UPDATE users SET "
                                 "(faculty_id, last_faculty_change, is_faculty_locked) = "
                                 "(:faculty_id, :last_faculty_change, :is_faculty_locked)"
                                 "WHERE user_id = :user_id", user)
                 else:
                     cur.execute("INSERT INTO users "
-                                "(faculty_id, last_faculty_change, is_faculty_locked) values "
-                                "(:faculty_id, :last_faculty_change, :is_faculty_locked)", user)
+                                "(user_id, faculty_id, last_faculty_change, is_faculty_locked) values "
+                                "(:user_id, :faculty_id, :last_faculty_change, :is_faculty_locked)", user)
         except Exception as e:
             LoggingUtils.logger.error(e)
             LoggingUtils.logger.debug(user)
@@ -179,4 +180,19 @@ class DB:
                             "channel_id int, "
                             "target_user int, "
                             "other_data text"
+                            ")")
+
+        if cur_migration < 5:
+            DB.set_setting('cur_migration', 5)
+            with DB.cursor() as cur:
+                cur.execute("CREATE TABLE events ( "
+                            "user_id int, "
+                            "name text, "
+                            "description text, "
+                            "is_confirmed bool DEFAULT FALSE, "
+                            "is_rejected bool DEFAULT false, "
+                            "reviewer_id int, "
+                            "confirmation_message_id int, "
+                            "start_time datetime, "
+                            "end_time datetime "
                             ")")
