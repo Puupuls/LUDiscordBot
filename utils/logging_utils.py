@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
+import discord
 from discord import Embed
 
 
@@ -37,24 +38,27 @@ class LoggingUtils:
     @staticmethod
     def log_to_db(
             event_name: str,
-            user_id: int,
-            message_id: int = None,
-            channel_id: int = None,
-            target_user: int = None,
+            user: discord.User,
+            message: discord.Message = None,
+            channel: discord.TextChannel = None,
+            target_user: discord.User = None,
             other_data: dict = None
     ):
         from utils.database import DB
         with DB.cursor() as cur:
             cur.execute("INSERT INTO log "
-                        "(event_name, timestamp, user_id, message_id, channel_id, target_user, other_data) VALUES "
-                        "(?,          ?,         ?,       ?,          ?,          ?,           ?)",
+                        "(event_name, timestamp, user_id, user, message_id, channel_id, channel, target_user_id, target_user, other_data) VALUES "
+                        "(?,          ?,         ?,       ?,    ?,          ?,          ?,       ?,              ?,           ?)",
                         (
                             event_name,
                             datetime.now(),
-                            user_id,
-                            message_id,
-                            channel_id,
-                            target_user,
+                            user.id,
+                            user.mention,
+                            message.id if message else None,
+                            channel.id if message else None,
+                            channel.mention if message else None,
+                            target_user.id if message else None,
+                            target_user.mention if message else None,
                             json.dumps(other_data)
                         ))
 

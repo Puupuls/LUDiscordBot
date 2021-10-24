@@ -1,6 +1,7 @@
 from discord.ext.commands import Bot
 from dislash import Option, OptionType, SlashInteraction, has_permissions, InteractionClient
 from utils.database import DB
+from utils.logging_utils import LoggingUtils
 
 
 def register_commands_rule(slash: InteractionClient, client: Bot):
@@ -21,6 +22,7 @@ def register_commands_rule(slash: InteractionClient, client: Bot):
         with DB.cursor() as cur:
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)", (msg.channel.id, msg.id, 'rules'))
 
+        LoggingUtils.log_to_db('rules_message_sent', user=ctx.author, channel=ctx.channel)
         await update_rules_message(ctx)
 
     @rule.sub_command(
@@ -45,6 +47,7 @@ def register_commands_rule(slash: InteractionClient, client: Bot):
                 mid = 0
             cur.execute("INSERT INTO rules VALUES "
                         "(?, ?)", (mid + 1, message,))
+            LoggingUtils.log_to_db('rules_added', user=ctx.author, other_data={'message': message})
         await update_rules_message(ctx)
 
     @rule.sub_command(
@@ -70,6 +73,7 @@ def register_commands_rule(slash: InteractionClient, client: Bot):
         await ctx.reply('Updating rule', ephemeral=True, delete_after=2)
         with DB.cursor() as cur:
             cur.execute('UPDATE rules SET rule = ? WHERE id = ?', (message, id,))
+        LoggingUtils.log_to_db('rules_updated', user=ctx.author, other_data={'message': message, 'rule_id': id})
 
         await update_rules_message(ctx)
 
@@ -91,6 +95,7 @@ def register_commands_rule(slash: InteractionClient, client: Bot):
         with DB.cursor() as cur:
             cur.execute('DELETE FROM rules WHERE id=?', (id,))
             cur.execute('UPDATE rules SET id = id-1 WHERE id > ?', (id,))
+        LoggingUtils.log_to_db('rules_removed', user=ctx.author, other_data={'rule_id': id})
 
         await update_rules_message(ctx)
 
@@ -118,6 +123,7 @@ def register_commands_rule(slash: InteractionClient, client: Bot):
         with DB.cursor() as cur:
             cur.execute('UPDATE rules SET id = id+1 WHERE id >= ?', (new_pos,))
             cur.execute('UPDATE rules SET id = ? WHERE id = ?', (new_pos, id + 1))
+        LoggingUtils.log_to_db('rules_reordered', user=ctx.author, other_data={'rule_id': id, 'new_id': new_pos})
 
         await update_rules_message(ctx)
 

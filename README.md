@@ -10,7 +10,7 @@ Based on discord.py package
 
 Packages:
 ``` 
-pip install discord.py dislash.py asyncio
+pip install discord.py dislash.py asyncio pytimeparse
 ```
 
 ------------------

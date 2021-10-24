@@ -61,6 +61,8 @@ def register_commands_faculty(slash: InteractionClient, client: Bot):
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)",
                         (msg.channel.id, msg.id, 'facultiesSelect'))
 
+        LoggingUtils.log_to_db('faculties_selector_created', user=ctx.author)
+
     @faculties.sub_command(
         name='stats',
         description='Create faculty member count display',
@@ -74,6 +76,7 @@ def register_commands_faculty(slash: InteractionClient, client: Bot):
         with DB.cursor() as cur:
             cur.execute("INSERT INTO messages (channel, message, type) VALUES (?, ?, ?)",
                         (msg.channel.id, msg.id, 'facultiesStats'))
+        LoggingUtils.log_to_db('faculties_stats_created', user=ctx.author)
         await update_faculty_stats(ctx)
 
     @faculties.sub_command(
@@ -95,7 +98,7 @@ def register_commands_faculty(slash: InteractionClient, client: Bot):
         ]
     )
     @has_permissions(administrator=True)
-    async def faculties_selector(ctx: SlashInteraction, faculty: discord.Role, user: discord.User):
+    async def faculties_lock_user(ctx: SlashInteraction, faculty: discord.Role, user: discord.User):
         faculties = BotHelper.get_faculty_roles(ctx)
         faculty_roles = [i[2].id for i in faculties]
         if faculty in [i[2].id for i in faculties]:
@@ -104,7 +107,7 @@ def register_commands_faculty(slash: InteractionClient, client: Bot):
             faculty = ctx.guild.get_role(faculty)
             await ctx.reply(content=':thumbsup:', ephemeral=True, delete_after=1)
             await LoggingUtils.log_to_discord(ctx, 'User faculty got locked', LoggingUtils.LogLevels.INFO, user=user.mention, faculty=faculty.mention, initiator=ctx.author.mention)
-            LoggingUtils.log_to_db('user_faculty_lock', user_id=ctx.author.id, target_user=user.id, other_data={'faculty_role_id': faculty.id})
+            LoggingUtils.log_to_db('user_faculty_lock', user=ctx.author, target_user=user, other_data={'faculty_role_id': faculty.id, 'faculty_role': faculty.mention})
 
             if not (len(user_roles) == 1 and user_roles[0].id == faculty.id):
                 try:
@@ -135,12 +138,12 @@ def register_commands_faculty(slash: InteractionClient, client: Bot):
         ]
     )
     @has_permissions(administrator=True)
-    async def faculties_selector(ctx: SlashInteraction, user: discord.User):
+    async def faculties_unlock_user(ctx: SlashInteraction, user: discord.User):
         local_user = DB.get_user(user)
         if local_user['is_faculty_locked']:
             await ctx.reply(content=':thumbsup:', ephemeral=True, delete_after=1)
             await LoggingUtils.log_to_discord(ctx, 'User faculty got un locked', LoggingUtils.LogLevels.INFO, user=user.mention, initiator=ctx.author.mention)
-            LoggingUtils.log_to_db('user_faculty_unlock', user_id=ctx.author.id, target_user=user.id)
+            LoggingUtils.log_to_db('user_faculty_unlock', user=ctx.author, target_user=user)
 
             local_user['is_faculty_locked'] = False
             DB.set_user(local_user)
@@ -165,7 +168,7 @@ async def on_faculty_role(ctx: MessageInteraction, selected: SelectOption):
     if selected_role not in [i.id for i in user_roles]:
         if not user['is_faculty_locked']:
             change_interval = timedelta(days=DB.get_setting('faculty_change_interval_days', 30))
-            if user['last_faculty_change'] < datetime.now() - change_interval or author_permission.manage_roles:
+            if (user['last_faculty_change'] < datetime.now() - change_interval) or author_permission.manage_roles:
                 try:
                     await ctx.author.remove_roles(*user_roles, reason="Updated from roles dropdown")
                 except Exception as e:
@@ -183,6 +186,12 @@ async def on_faculty_role(ctx: MessageInteraction, selected: SelectOption):
                             initial_faculty=ctx.guild.get_role(user['faculty_id']).mention,
                             new_faculty=selected_role.mention
                         )
+                        LoggingUtils.log_to_db('faculties_user_reassigned', user=ctx.author, other_data={
+                            'initial_facultyId': ctx.guild.get_role(user['faculty_id']).id,
+                            'initial_faculty': ctx.guild.get_role(user['faculty_id']).mention,
+                            'new_faculty_id': selected_role.id,
+                            'new_faculty': selected_role.mention
+                        })
                     user['faculty_id'] = selected_role.id
                     user['last_faculty_change'] = datetime.now()
                 except Exception as e:

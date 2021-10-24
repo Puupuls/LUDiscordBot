@@ -18,23 +18,26 @@ def register_commands_post(slash: InteractionClient, client: Bot):
         description='Send message as bot (To get newlines, use escape character \\n)',
         options=[
             Option(
-                name='channel',
-                description='Text channel to send message in',
-                type=OptionType.CHANNEL,
-                required=True
-            ),
-            Option(
                 name='message',
                 description='The message to send',
                 type=OptionType.STRING,
                 required=True
             ),
+            Option(
+                name='channel',
+                description='Text channel to send message in',
+                type=OptionType.CHANNEL,
+                required=False
+            ),
         ]
     )
     @has_permissions(administrator=True)
-    async def send_post(ctx: SlashInteraction, channel: discord.TextChannel, message: str):
+    async def send_post(ctx: SlashInteraction, message: str, channel: discord.TextChannel = None):
+        if not channel:
+            channel = ctx.channel
         if isinstance(channel, discord.TextChannel):
             await channel.send(message.replace('\\n', '\n'))
+            LoggingUtils.log_to_db('message_sent', user=ctx.author, channel=channel)
             await ctx.send(':thumbsup:', ephemeral=True, delete_after=1)
         else:
             await ctx.reply('You must provide text channel', ephemeral=True, delete_after=2)
@@ -69,6 +72,7 @@ def register_commands_post(slash: InteractionClient, client: Bot):
                         try:
                             await msg.edit(content=message.replace('\\n', '\n'))
                             await ctx.reply(':thumbsup:', ephemeral=True, delete_after=1)
+                            LoggingUtils.log_to_db('message_edited', user=ctx.author, channel=channel, message=msg)
                         except Exception as e:
                             print(e)
                             await ctx.reply('Could not edit message with provided id', ephemeral=True, delete_after=2)

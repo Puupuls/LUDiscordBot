@@ -10,7 +10,7 @@ def register_commands_misc(slash: InteractionClient, client: Bot):
     )
     async def about(context: SlashInteraction):
         await context.send(
-            content=f"Developed by @Puupuls for LU Gaming discord",
+            content=f"Developed by @Puupuls for LU Gaming discord\n[Github](https://github.com/Puupuls/LUDiscordBot)",
             delete_after=5,
             ephemeral=True
         )

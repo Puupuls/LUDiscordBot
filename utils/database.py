@@ -38,6 +38,7 @@ class DB:
         DB.__drop_tables()
         DB.__create_tables()
         DB.__seed_tables()
+        DB.migrate_db()
 
     @staticmethod
     def __drop_tables():
@@ -46,7 +47,6 @@ class DB:
             cur.execute("DROP TABLE IF EXISTS faculties")
             cur.execute("DROP TABLE IF EXISTS messages")
             cur.execute("DROP TABLE IF EXISTS rules")
-            cur.execute("DROP TABLE IF EXISTS role_switch_log")
 
     @staticmethod
     def __create_tables():
@@ -117,6 +117,8 @@ class DB:
                     'last_faculty_change': datetime.fromtimestamp(0),
                     'is_faculty_locked': False,
                 }
+            else:
+                user['last_faculty_change'] = datetime.fromisoformat(user['last_faculty_change'])
             return user
 
     @staticmethod
@@ -176,8 +178,10 @@ class DB:
                             "event_name text, "
                             "timestamp DATETIME, "
                             "user_id int, "
+                            "user text, "
                             "message_id int, "
                             "channel_id int, "
+                            "channel text, "
                             "target_user int, "
                             "other_data text"
                             ")")
