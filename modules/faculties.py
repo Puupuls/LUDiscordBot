@@ -111,16 +111,15 @@ def register_commands_faculty(slash: InteractionClient, client: Bot):
 
             if not (len(user_roles) == 1 and user_roles[0].id == faculty.id):
                 try:
-                    await ctx.author.remove_roles(*user_roles, reason="Removed by admin command")
+                    await user.remove_roles(*user_roles, reason="Removed by admin command")
                 except Exception as e:
-                    print(e)
+                    LoggingUtils.logger.exception(e)
 
-                await ctx.author.add_roles(faculty, reason="Added by admin command")
+                await user.add_roles(faculty, reason="Added by admin command")
 
             local_user = DB.get_user(user)
             local_user['faculty_id'] = faculty.id
             local_user['is_faculty_locked'] = True
-            print(local_user)
             DB.set_user(local_user)
         else:
             await ctx.reply(content='That is not valid faculty role', ephemeral=True, delete_after=1)
@@ -172,7 +171,7 @@ async def on_faculty_role(ctx: MessageInteraction, selected: SelectOption):
                 try:
                     await ctx.author.remove_roles(*user_roles, reason="Updated from roles dropdown")
                 except Exception as e:
-                    print(e)
+                    LoggingUtils.logger.exception(e)
 
                 try:
                     selected_role = ctx.guild.get_role(selected_role)
@@ -195,7 +194,7 @@ async def on_faculty_role(ctx: MessageInteraction, selected: SelectOption):
                     user['faculty_id'] = selected_role.id
                     user['last_faculty_change'] = datetime.now()
                 except Exception as e:
-                    print(e)
+                    LoggingUtils.logger.exception(e)
                 await ctx.reply('Tava fakultāte tika atjaunota', ephemeral=True, delete_after=2)
             else:
                 await ctx.reply(f'Tu atkārtoti varēsi izvēlēties savu fakultāti {(datetime.now() + (change_interval-(datetime.now()-user["last_faculty_change"]))).strftime("%Y.%m.%d")}', ephemeral=True, delete_after=2)

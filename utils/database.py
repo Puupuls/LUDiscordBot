@@ -109,17 +109,17 @@ class DB:
     def get_user(user: User):
         with DB.cursor() as cur:
             cur.execute("SELECT * FROM users WHERE user_id = ?", (user.id,))
-            user = cur.fetchone()
-            if not user:
-                user = {
+            u = cur.fetchone()
+            if not u:
+                u = {
                     'user_id': user.id,
                     'faculty_id': None,
                     'last_faculty_change': datetime.fromtimestamp(0),
                     'is_faculty_locked': False,
                 }
             else:
-                user['last_faculty_change'] = datetime.fromisoformat(user['last_faculty_change'])
-            return user
+                u['last_faculty_change'] = datetime.fromisoformat(u['last_faculty_change'])
+            return u
 
     @staticmethod
     def set_user(user: dict):
@@ -189,14 +189,12 @@ class DB:
         if cur_migration < 5:
             DB.set_setting('cur_migration', 5)
             with DB.cursor() as cur:
-                cur.execute("CREATE TABLE events ( "
+                cur.execute("CREATE TABLE mod_log ("
                             "user_id int, "
-                            "name text, "
-                            "description text, "
-                            "is_confirmed bool DEFAULT FALSE, "
-                            "is_rejected bool DEFAULT false, "
-                            "reviewer_id int, "
-                            "confirmation_message_id int, "
-                            "start_time datetime, "
-                            "end_time datetime "
+                            "moderator_id int, "
+                            "action text, "
+                            "reason text, "
+                            "bot_message_link text, "
+                            "timestamp datetime DEFAULT date('now'), "
+                            "valid_until datetime"
                             ")")

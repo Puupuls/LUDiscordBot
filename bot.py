@@ -6,6 +6,7 @@ from ENV import BOT_TOKEN
 from modules.discord_base import init_discord
 from modules.faculties import on_faculty_role, register_commands_faculty
 from modules.misc import register_commands_misc
+from modules.moderation import register_commands_moderation
 from modules.post import register_commands_post
 from modules.rules import register_commands_rule
 from utils.database import DB
@@ -16,6 +17,7 @@ register_commands_misc(slash, client)
 register_commands_faculty(slash, client)
 register_commands_rule(slash, client)
 register_commands_post(slash, client)
+register_commands_moderation(slash, client)
 # register_commands_events(slash, client)  # Not working, need more concepts about how to implement nicely
 
 

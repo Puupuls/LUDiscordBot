@@ -1,6 +1,7 @@
 from discord.ext.commands import Bot
 from dislash import SlashInteraction, InteractionClient
 from utils.database import DB
+from utils.logging_utils import LoggingUtils
 
 
 def register_commands_misc(slash: InteractionClient, client: Bot):
@@ -22,4 +23,5 @@ def register_commands_misc(slash: InteractionClient, client: Bot):
     async def about(ctx: SlashInteraction):
         DB.set_setting('log_channel', ctx.channel.id)
         await LoggingUtils.log_to_discord(ctx, 'Set this channel as logging channel')
+        await LoggingUtils.log_to_db(event_name='set_log_channel', user=ctx.author, channel=ctx.channel)
         await ctx.reply(':thumbsup:', ephemeral=True)

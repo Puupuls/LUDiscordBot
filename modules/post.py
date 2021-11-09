@@ -64,6 +64,7 @@ def register_commands_post(slash: InteractionClient, client: Bot):
     async def edit_post(ctx: SlashInteraction, message_link: str, message: str):
         try:
             channel_id, message_id = message_link.split('/')[-2:]
+            channel_id, message_id = int(channel_id), int(message_id)
             channel: discord.TextChannel = ctx.guild.get_channel(channel_id)
             if isinstance(channel, discord.TextChannel):
                 try:

@@ -44,23 +44,26 @@ class LoggingUtils:
             target_user: discord.User = None,
             other_data: dict = None
     ):
-        from utils.database import DB
-        with DB.cursor() as cur:
-            cur.execute("INSERT INTO log "
-                        "(event_name, timestamp, user_id, user, message_id, channel_id, channel, target_user_id, target_user, other_data) VALUES "
-                        "(?,          ?,         ?,       ?,    ?,          ?,          ?,       ?,              ?,           ?)",
-                        (
-                            event_name,
-                            datetime.now(),
-                            user.id,
-                            user.mention,
-                            message.id if message else None,
-                            channel.id if message else None,
-                            channel.mention if message else None,
-                            target_user.id if message else None,
-                            target_user.mention if message else None,
-                            json.dumps(other_data)
-                        ))
+        try:
+            from utils.database import DB
+            with DB.cursor() as cur:
+                cur.execute("INSERT INTO log "
+                            "(event_name, timestamp, user_id, user, message_id, channel_id, channel, target_user_id, target_user, other_data) VALUES "
+                            "(?,          ?,         ?,       ?,    ?,          ?,          ?,       ?,              ?,           ?)",
+                            (
+                                event_name,
+                                datetime.now(),
+                                user.id,
+                                user.mention,
+                                message.id if message else None,
+                                channel.id if message else None,
+                                channel.mention if message else None,
+                                target_user.id if message else None,
+                                target_user.mention if message else None,
+                                json.dumps(other_data)
+                            ))
+        except Exception as e:
+            LoggingUtils.logger.error(e)
 
     @staticmethod
     def init(name):
