@@ -5,5 +5,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  - dislash.py
   - discord.py=1.7.3
+  - pip
+  - pip:
+      - dislash.py
