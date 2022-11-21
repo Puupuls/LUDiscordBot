@@ -1,0 +1,9 @@
+name: LU_BOT
+channels:
+  - defaults
+  - anaconda
+  - conda-forge
+dependencies:
+  - python=3.9
+  - dislash.py
+  - discord.py=1.7.3

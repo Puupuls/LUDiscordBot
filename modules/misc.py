@@ -20,7 +20,7 @@ def register_commands_misc(slash: InteractionClient, client: Bot):
         name=f'set_log_channel',
         description='Set current channel as bots log channel, server can have only one log channel',
     )
-    async def about(ctx: SlashInteraction):
+    async def slc(ctx: SlashInteraction):
         DB.set_setting('log_channel', ctx.channel.id)
         await LoggingUtils.log_to_discord(ctx, 'Set this channel as logging channel')
         await LoggingUtils.log_to_db(event_name='set_log_channel', user=ctx.author, channel=ctx.channel)
